@@ -1,0 +1,33 @@
+# Builds the four monitoring images. Jenkins runs:
+#   REGISTRY=<acr>.azurecr.io TAG=<sha> docker compose build|push <services>
+# Locally: docker compose up -d   (Grafana on http://localhost:3000)
+services:
+  grafana:
+    build: ./grafana
+    image: ${REGISTRY:-local}/grafana:${TAG:-latest}
+    ports: ["3000:3000"]
+    environment:
+      PROMETHEUS_URL: http://prometheus:9090
+      LOKI_URL: http://loki:3100
+      TEMPO_URL: http://tempo:3200
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    depends_on: [prometheus, loki, tempo]
+
+  prometheus:
+    build: ./prometheus
+    image: ${REGISTRY:-local}/prometheus:${TAG:-latest}
+    ports: ["9090:9090"]
+
+  loki:
+    build: ./loki
+    image: ${REGISTRY:-local}/loki:${TAG:-latest}
+    ports: ["3100:3100"]
+
+  tempo:
+    build: ./tempo
+    image: ${REGISTRY:-local}/tempo:${TAG:-latest}
+    ports:
+      - "3200:3200"   # query API (Grafana and the backend read traces here)
+      - "4317:4317"   # OTLP gRPC
+      - "4318:4318"   # OTLP HTTP (apps send traces here)
